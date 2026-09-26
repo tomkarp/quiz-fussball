@@ -11,26 +11,16 @@ type Team
     | Red
 
 
-type BallPosition
-    = Kickoff
-    | Station Int
-
-
-type ShotResult
-    = Goal
-    | MoveTo BallPosition
-
-
 type alias Model =
     { blueGoals : Int
     , redGoals : Int
     , stations : Int
-    , position : BallPosition
+    , position : Int
     }
 
 
 type Msg
-    = Score Team
+    = Shoot Team
     | SetStations Int
     | Reset
 
@@ -42,13 +32,13 @@ main =
 
 init : Model
 init =
-    { blueGoals = 0, redGoals = 0, stations = 2, position = Kickoff }
+    { blueGoals = 0, redGoals = 0, stations = 2, position = 0 }
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        Score team ->
+        Shoot team ->
             let
                 direction =
                     if team == Blue then
@@ -56,46 +46,45 @@ update msg model =
 
                     else
                         -1
+
+                position =
+                    nextPosition direction model.position
             in
-            case nextPosition model.stations direction model.position of
-                Goal ->
-                    case team of
-                        Blue ->
-                            { model | blueGoals = model.blueGoals + 1, position = Kickoff }
+            if position > model.stations then
+                { model | blueGoals = model.blueGoals + 1, position = 0 }
 
-                        Red ->
-                            { model | redGoals = model.redGoals + 1, position = Kickoff }
+            else if position < -model.stations then
+                { model | redGoals = model.redGoals + 1, position = 0 }
 
-                MoveTo position ->
-                    { model | position = position }
+            else
+                { model | position = position }
 
         SetStations number ->
-            setStationCount number model
+            let
+                stations =
+                    max 0 number
+            in
+            { model
+                | stations = stations
+                , position = clamp (-stations) stations model.position
+            }
 
         Reset ->
             init
 
 
-setStationCount : Int -> Model -> Model
-setStationCount number model =
+-- 0 ist der Anspielpunkt. Im laufenden Spiel wird er übersprungen.
+nextPosition : Int -> Int -> Int
+nextPosition direction position =
     let
-        stations =
-            max 0 number
+        next =
+            position + direction
     in
-    { model
-        | stations = stations
-        , position =
-            if stations == 0 then
-                Kickoff
+    if next == 0 then
+        direction
 
-            else
-                case model.position of
-                    Kickoff ->
-                        Kickoff
-
-                    Station position ->
-                        Station (clamp (-stations) stations position)
-    }
+    else
+        next
 
 
 view : Model -> Html Msg
@@ -133,54 +122,12 @@ scoreCard teamName goals =
         ]
 
 
-shotButton : Team -> String -> Html Msg
-shotButton team caption =
-    let
-        arrow =
-            if team == Blue then
-                "→"
-
-            else
-                "←"
-    in
-    button [ onClick (Score team), attribute "aria-label" caption ] [ text arrow ]
-
-
 shotControls : Html Msg
 shotControls =
     div []
-        [ shotButton Blue "Blau schießt"
-        , shotButton Red "Rot schießt"
+        [ button [ onClick (Shoot Blue), attribute "aria-label" "Blau schießt" ] [ text "→" ]
+        , button [ onClick (Shoot Red), attribute "aria-label" "Rot schießt" ] [ text "←" ]
         ]
-
-
-nextPosition : Int -> Int -> BallPosition -> ShotResult
-nextPosition stations direction position =
-    case position of
-        Kickoff ->
-            if stations == 0 then
-                Goal
-
-            else
-                MoveTo (Station direction)
-
-        Station current ->
-            let
-                next =
-                    current + direction
-
-                nextStation =
-                    if next == 0 then
-                        direction
-
-                    else
-                        next
-            in
-            if nextStation > stations || nextStation < -stations then
-                Goal
-
-            else
-                MoveTo (Station nextStation)
 
 
 pitch : Model -> Html Msg
@@ -197,7 +144,7 @@ pitch model =
                 ]
             , track model -1
             , track model 1
-            , if model.position == Kickoff then
+            , if model.position == 0 then
                 strong [] [ text "⚽" ]
 
               else
@@ -211,7 +158,7 @@ track model direction =
     let
         station index =
             li []
-                [ if model.position == Station (direction * index) then
+                [ if model.position == direction * index then
                     strong [] [ text "⚽" ]
 
                   else

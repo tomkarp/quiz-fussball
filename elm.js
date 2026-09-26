@@ -4370,8 +4370,7 @@ function _Browser_load(url)
 		}
 	}));
 }
-var $author$project$Main$Kickoff = {$: 'Kickoff'};
-var $author$project$Main$init = {blueGoals: 0, position: $author$project$Main$Kickoff, redGoals: 0, stations: 2};
+var $author$project$Main$init = {blueGoals: 0, position: 0, redGoals: 0, stations: 2};
 var $elm$core$Basics$EQ = {$: 'EQ'};
 var $elm$core$Basics$GT = {$: 'GT'};
 var $elm$core$Basics$LT = {$: 'LT'};
@@ -5183,82 +5182,41 @@ var $elm$browser$Browser$sandbox = function (impl) {
 		});
 };
 var $author$project$Main$Blue = {$: 'Blue'};
-var $elm$core$Basics$negate = function (n) {
-	return -n;
-};
-var $author$project$Main$Goal = {$: 'Goal'};
-var $author$project$Main$MoveTo = function (a) {
-	return {$: 'MoveTo', a: a};
-};
-var $author$project$Main$Station = function (a) {
-	return {$: 'Station', a: a};
-};
-var $author$project$Main$nextPosition = F3(
-	function (stations, direction, position) {
-		if (position.$ === 'Kickoff') {
-			return (!stations) ? $author$project$Main$Goal : $author$project$Main$MoveTo(
-				$author$project$Main$Station(direction));
-		} else {
-			var current = position.a;
-			var next = current + direction;
-			var nextStation = (!next) ? direction : next;
-			return ((_Utils_cmp(nextStation, stations) > 0) || (_Utils_cmp(nextStation, -stations) < 0)) ? $author$project$Main$Goal : $author$project$Main$MoveTo(
-				$author$project$Main$Station(nextStation));
-		}
-	});
 var $elm$core$Basics$clamp = F3(
 	function (low, high, number) {
 		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
 	});
-var $author$project$Main$setStationCount = F2(
-	function (number, model) {
-		var stations = A2($elm$core$Basics$max, 0, number);
-		return _Utils_update(
-			model,
-			{
-				position: function () {
-					if (!stations) {
-						return $author$project$Main$Kickoff;
-					} else {
-						var _v0 = model.position;
-						if (_v0.$ === 'Kickoff') {
-							return $author$project$Main$Kickoff;
-						} else {
-							var position = _v0.a;
-							return $author$project$Main$Station(
-								A3($elm$core$Basics$clamp, -stations, stations, position));
-						}
-					}
-				}(),
-				stations: stations
-			});
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $author$project$Main$nextPosition = F2(
+	function (direction, position) {
+		var next = position + direction;
+		return (!next) ? direction : next;
 	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
-			case 'Score':
+			case 'Shoot':
 				var team = msg.a;
 				var direction = _Utils_eq(team, $author$project$Main$Blue) ? 1 : (-1);
-				var _v1 = A3($author$project$Main$nextPosition, model.stations, direction, model.position);
-				if (_v1.$ === 'Goal') {
-					if (team.$ === 'Blue') {
-						return _Utils_update(
-							model,
-							{blueGoals: model.blueGoals + 1, position: $author$project$Main$Kickoff});
-					} else {
-						return _Utils_update(
-							model,
-							{position: $author$project$Main$Kickoff, redGoals: model.redGoals + 1});
-					}
-				} else {
-					var position = _v1.a;
-					return _Utils_update(
-						model,
-						{position: position});
-				}
+				var position = A2($author$project$Main$nextPosition, direction, model.position);
+				return (_Utils_cmp(position, model.stations) > 0) ? _Utils_update(
+					model,
+					{blueGoals: model.blueGoals + 1, position: 0}) : ((_Utils_cmp(position, -model.stations) < 0) ? _Utils_update(
+					model,
+					{position: 0, redGoals: model.redGoals + 1}) : _Utils_update(
+					model,
+					{position: position}));
 			case 'SetStations':
 				var number = msg.a;
-				return A2($author$project$Main$setStationCount, number, model);
+				var stations = A2($elm$core$Basics$max, 0, number);
+				return _Utils_update(
+					model,
+					{
+						position: A3($elm$core$Basics$clamp, -stations, stations, model.position),
+						stations: stations
+					});
 			default:
 				return $author$project$Main$init;
 		}
@@ -5306,9 +5264,7 @@ var $author$project$Main$track = F2(
 				_List_Nil,
 				_List_fromArray(
 					[
-						_Utils_eq(
-						model.position,
-						$author$project$Main$Station(direction * index)) ? A2(
+						_Utils_eq(model.position, direction * index) ? A2(
 						$elm$html$Html$strong,
 						_List_Nil,
 						_List_fromArray(
@@ -5350,7 +5306,7 @@ var $author$project$Main$pitch = function (model) {
 							])),
 						A2($author$project$Main$track, model, -1),
 						A2($author$project$Main$track, model, 1),
-						_Utils_eq(model.position, $author$project$Main$Kickoff) ? A2(
+						(!model.position) ? A2(
 						$elm$html$Html$strong,
 						_List_Nil,
 						_List_fromArray(
@@ -5392,8 +5348,8 @@ var $author$project$Main$scoreCard = F2(
 				]));
 	});
 var $author$project$Main$Red = {$: 'Red'};
-var $author$project$Main$Score = function (a) {
-	return {$: 'Score', a: a};
+var $author$project$Main$Shoot = function (a) {
+	return {$: 'Shoot', a: a};
 };
 var $elm$virtual_dom$VirtualDom$attribute = F2(
 	function (key, value) {
@@ -5403,29 +5359,35 @@ var $elm$virtual_dom$VirtualDom$attribute = F2(
 			_VirtualDom_noJavaScriptOrHtmlUri(value));
 	});
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
-var $author$project$Main$shotButton = F2(
-	function (team, caption) {
-		var arrow = _Utils_eq(team, $author$project$Main$Blue) ? '→' : '←';
-		return A2(
-			$elm$html$Html$button,
-			_List_fromArray(
-				[
-					$elm$html$Html$Events$onClick(
-					$author$project$Main$Score(team)),
-					A2($elm$html$Html$Attributes$attribute, 'aria-label', caption)
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text(arrow)
-				]));
-	});
 var $author$project$Main$shotControls = A2(
 	$elm$html$Html$div,
 	_List_Nil,
 	_List_fromArray(
 		[
-			A2($author$project$Main$shotButton, $author$project$Main$Blue, 'Blau schießt'),
-			A2($author$project$Main$shotButton, $author$project$Main$Red, 'Rot schießt')
+			A2(
+			$elm$html$Html$button,
+			_List_fromArray(
+				[
+					$elm$html$Html$Events$onClick(
+					$author$project$Main$Shoot($author$project$Main$Blue)),
+					A2($elm$html$Html$Attributes$attribute, 'aria-label', 'Blau schießt')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('→')
+				])),
+			A2(
+			$elm$html$Html$button,
+			_List_fromArray(
+				[
+					$elm$html$Html$Events$onClick(
+					$author$project$Main$Shoot($author$project$Main$Red)),
+					A2($elm$html$Html$Attributes$attribute, 'aria-label', 'Rot schießt')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('←')
+				]))
 		]));
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $elm$html$Html$Attributes$stringProperty = F2(
